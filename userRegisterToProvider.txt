@@ -1,0 +1,76 @@
+pragma solidity ^0.4.18;
+
+contract userRegisterToProvider{
+    
+    uint public userCount;
+    
+    //Structure to hold the provider details
+    struct billDetails{
+        address provider;
+        uint billAmount;
+    }
+    //Creates a mapping of user to provider
+    mapping(address => billDetails) registeredTo;
+    
+    //Struct to hold user and the corresponding provider details
+    struct usersAndProviders {
+        address userAddr;
+        address providerAddr;
+    }
+    
+    //Stores all the addresses of the users who registered to this provider
+    mapping(uint => usersAndProviders) public usersInfo;
+    
+    function userRegisterToProvider() public {
+        userCount = 0;
+    }
+    
+    function register(address _provider, address _providerContractAddress, address _userContractAddress) public returns (string) {
+        bool currentProvider = false;
+        for(uint i=0; i<=userCount; i++){
+            address existProvider = usersInfo[i].providerAddr;
+            if(_provider == existProvider){
+                currentProvider = true;
+                break;
+            }
+        }
+        if(currentProvider == false){
+            
+            //When a user is first registering set the bill amount to zero and update the mapping
+            uint _billAmount = 0;
+            registeredTo[msg.sender] = billDetails(_provider, _billAmount);
+    
+            //Update the mapping with user and provider    
+            userCount += 1;
+            usersInfo[userCount] = usersAndProviders(msg.sender, _provider);
+
+            //Call provider contract function updateUserCount() to update the user count for this particular provider
+            Provider p = Provider(_providerContractAddress);
+            p.updateUserCount(_provider);
+            
+            //Call user contract function updateProviderCount() to update the provider count for this particular user
+            User uc = User(_userContractAddress);
+            uc.updateProviderCount(msg.sender);
+            
+            //Call "user" contract function "addProvider()" to add the provider to the user contract
+            User u = User(_userContractAddress);
+            u.addProvider(_provider);
+            
+            return "User Successfully registered to this provider";
+        }else{
+            return "Sorry! You are already registered to this provider.";
+        }
+    }
+
+    function returnUserCount() public view returns (uint){
+        return userCount;
+    }
+}
+contract Provider{
+    function updateUserCount(address _provider) public;
+    function addUser(address _provider) public;
+}
+contract User{
+    function addProvider(address _provider) public;
+    function updateProviderCount(address _user) public;
+}

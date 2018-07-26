@@ -1,0 +1,31 @@
+pragma solidity ^0.4.18;
+
+contract adminsContract{
+    address owner;
+    uint256 totalRevenue;
+    
+    function adminsContract() {
+        owner = msg.sender;
+    }
+    
+    modifier onlyOwner(){
+        require(msg.sender==owner);
+        _;
+    }
+    
+    function kill() onlyOwner public {
+        selfdestruct(owner);
+    }
+    
+    function transferOwnership(address newOwner) onlyOwner public {
+        owner = newOwner;
+    }
+    
+    function withdrawFee() onlyOwner payable public {
+        owner.transfer(totalRevenue);
+        totalRevenue = 0;
+    }
+    function retSome() public view returns (address) {
+        return owner;
+    }
+}

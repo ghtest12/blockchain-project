@@ -1,0 +1,143 @@
+//Solidity Version
+pragma solidity ^0.4.18;
+
+//The following import is used for string contatination
+import "github.com/Arachnid/solidity-stringutils/strings.sol";
+
+/* This contract stores the 
+1. individual provider details
+2. Stores all the providers registered to the system
+3. Stores all the users registered to a particular Provider
+4. Providers constructor to initialize the initial count of providers to zero
+5. Provides function for anyone to register as a Provider
+6. Provides functionality to check if a provider exists and active(used by the userRegisterToProvider contract)
+7. Provides functionality to update the user count for a particular provider whenever a new user registers to him
+8. Provides functionality to add user addresses to an array for a particular provider when a new user registers to the Provider
+9. Provides functionality for any provider to get unregistered from the system
+*/
+contract Provider {
+    //Stores the address of the provider
+    //address provider;
+    using strings for *;
+    /* Stores the individual provider details*/
+    //Stores whether the provider is active, inactive or blocked in the system.
+    enum state {inactive, active, blocked}
+    
+    //Structure to store the provider's details
+    struct providerDetails {
+        string serviceName;
+        string companyName;
+        string cntactLastName;
+        string contactFirstName;
+        string contactPhone;
+        state providerState;
+        uint userCount;
+    }
+    
+    //Can retrieve the provider details using providers address
+    mapping (address => providerDetails) public providerInfo;
+    
+    //Event for storing the new provider address and success or failure message
+    event newProvider(address provider, string message);
+    
+    /*Stores all the providers registered to the system*/
+    //Stores all the provider addresses registered to the platform
+    //uint providerCount;
+    //struct allProviders {
+        address[] allProviderAddrs;
+    //}
+    //Mapping by the provider count to the "allProviders" structure
+    //mapping (uint => allProviders) allProvidersInfo;
+
+    /*Stores all the users registered to a particular user*/
+    //Stores all the users addresses registered to this particular address
+    struct allUsers {
+        address[] userAddrs;
+    }
+    //Mapping by the provider address to the "allUsers" structure
+    mapping (address => allUsers) providerToUsers;
+    /*
+    function Provider() public {
+        providerCount = 0;
+    }*/
+    
+    //Add provider to the system
+    function registerAsProvider(string _serviceName, string _companyName, string _contactLastName, string _contactFirstName, string _contactPhone) public returns (string){
+        if(keccak256(providerInfo[msg.sender].serviceName) == keccak256("")){
+            state _providersState = state.active;
+            uint _userCount = 0;
+            providerInfo[msg.sender] = providerDetails(_serviceName, _companyName, _contactLastName, _contactFirstName, _contactPhone, _providersState, _userCount );
+            //Increment the provider count and store the new provider address into mapping using provider count
+            //providerCount += 1;
+            //allProvidersInfo[providerCount].allProviderAddrs.push(msg.sender);
+            allProviderAddrs.push(msg.sender);
+            newProvider(msg.sender, "Successfully registered as provider");
+        }else{
+            newProvider(msg.sender, "Sorry! The provider already exists in the system.");
+        }
+    }
+    
+    //The following function will be called by userRegisterToProvider contract to check if the provider exists and active
+    function checkProvider(address _provider) public view returns (bool){
+        uint prState = uint(providerInfo[_provider].providerState);
+        if(keccak256(providerInfo[_provider].serviceName) != keccak256("") && prState == 1){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    //This function will be used by 'userRegisterToProvider' contract to update the user count under a particular provider.
+    function updateUserCount(address _provider) public {
+        providerInfo[_provider].userCount += 1;
+    }
+    
+    //This function will be called by "userRegisterToProvider" contract to add the user address to "userAddrs" array
+    //Since this function will be call by the user when the user execute the 'userRegisterToProvider' contract, we have to pass the provider address as well.
+    //Note: check if we have to tx.origin instead of msg.sender as msg.sender may not be the users address but it might be the address of the other contract.
+    function addUser(address _provider) public {
+        providerToUsers[_provider].userAddrs.push(msg.sender);
+    }
+    
+    //Provider removed from the system - soft delete
+    function removeProvider() public{
+        state _providerState = state.inactive;
+        providerInfo[msg.sender].providerState = _providerState;
+    }
+    
+    /*In solidity it's not possible to return(at the time of writing this) an array of strings. So for getting 
+    address, service name and company name of all providers first we have to pass the array of addresses to front
+    end and then we have to call another function (many times) with each address from front end to get the service
+    name and company individually for each address.
+    The following two functions will do that*/
+
+    //funciton that returns all the providers addresses
+    function showAllProviders() public view returns (address[], string, string){
+        string memory serviceString = "";
+        string memory companyString = "";
+        string memory concatString = "&&!!&&";
+        for(uint i=0; i<allProviderAddrs.length; i++){
+            string memory currentServiceName = providerInfo[allProviderAddrs[i]].serviceName;
+            string memory currentCompanyName = providerInfo[allProviderAddrs[i]].companyName;
+            if(i==0){
+                serviceString = currentServiceName;
+                companyString = currentCompanyName;
+            }else{
+                serviceString = serviceString.toSlice().concat(concatString.toSlice());
+                serviceString = serviceString.toSlice().concat(currentServiceName.toSlice());
+                companyString = companyString.toSlice().concat(concatString.toSlice());
+                companyString = companyString.toSlice().concat(currentCompanyName.toSlice());
+            }
+        }
+        return (allProviderAddrs, serviceString, companyString);
+    }
+    
+    //function to return the provider service name and company name based on provider address
+    function returnProviderInfo(address _userContractAddress) public view returns (address[], string, string){
+        User usr = User(_userContractAddress);
+        address[] memory userProviders = usr.returnProviders(msg.sender);
+    }
+}
+contract User{
+    function returnProviders(address _userAddress) public view returns (address[]);
+}

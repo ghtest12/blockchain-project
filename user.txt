@@ -1,0 +1,79 @@
+//Solidity Version
+pragma solidity ^0.4.18;
+
+contract User {
+    //Stores the address of the user
+    //address user;
+    
+    //Stores whether the user is active, inactive or blocked in the system.
+    enum state {inactive, active, blocked}
+    
+    //Structure to store the user details
+    struct userDetails {
+        string userLastName;
+        string userFirstName;
+        string userPhone;
+        state userState;
+        uint providerCount;
+    }
+    
+    //Can retrieve the user details using user address
+    mapping (address => userDetails) public userInfo;
+    
+    //Stores all the addresses of the providers to which user is registered to
+    struct allProviders {
+        address[] registeredTo;
+    }
+    //Mapping by the user address to the "allProviders" structure
+    mapping (address => allProviders) userToProviders;
+    
+    //Event for storing the user address and success or failure message
+    event newUser(address user, string message);
+    
+    //Add user to the system
+    //Check before adding, if the user already exists
+    function addUser(string _userLastName, string _userFirstName, string _userPhone) public returns (string){
+        if(keccak256(userInfo[msg.sender].userLastName) == keccak256("")){
+            state _userState = state.active;
+            uint _providerCount = 0;
+            userInfo[msg.sender] = userDetails(_userLastName, _userFirstName, _userPhone, _userState, _providerCount );
+            //return "successfully added";
+            newUser(msg.sender, "User Successfully Added");
+        }else{
+            //return "Sorry! The user already exists.";
+            newUser(msg.sender, "User Already Exists");
+        }
+    }
+    
+    //User removes from the system. Makes the state to inactive
+    function removeUser() public{
+        state _userState = state.inactive;
+        userInfo[msg.sender].userState = _userState;
+    }
+    
+    //This function will be called by "userRegisterToProvider" contract to add the provider address to "registeredTo" array
+    function addProvider(address _provider) public {
+        userToProviders[msg.sender].registeredTo.push(_provider);
+    }
+    
+    //This function will be used by 'userRegisterToProvider' contract to update the provider count under a particular user.
+    //Note: Insted of passing the _user variable check if we can use msg.sender or tx.orgin
+    function updateProviderCount(address _user) public {
+        userInfo[_user].providerCount += 1;
+    }
+
+    //This function returns all the providers to which the user is registered to
+    function returnProviders(address _userAddress) public view returns (address[]){
+        return userToProviders[_userAddress].registeredTo;
+    }    
+    
+    function returnLastName(address _user) public view returns (string) {
+        return userInfo[_user].userLastName;
+    }
+    function returnState(address _user) public view returns (uint) {
+        return uint(userInfo[_user].userState);
+    }
+    function returnProviders1() public view returns (uint){
+        return userToProviders[msg.sender].registeredTo.length;
+    }
+}
